@@ -1,0 +1,13 @@
+{
+    "recommendations": [
+        "ms-vscode.azure-account",
+        "ms-azure-devops.azure-pipelines",
+        "ms-azuretools.vscode-bicep",
+        "ms-dotnettools.vscodeintellicode-csharp",
+        // "ms-azuretools.vscode-docker",
+        // "ms-vscode.powershell",
+        // "ms-vscode-remote.vscode-remote-extensionpack",
+        "ms-azuretools.vscode-azureappservice",
+        "streetsidesoftware.code-spell-checker"
+    ]
+}

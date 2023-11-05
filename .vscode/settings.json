@@ -1,0 +1,13 @@
+{
+    "cSpell.enabled": true,
+    "cSpell.language": "en",
+    "cSpell.enableFiletypes": [
+        "bicep",
+        "csharp",
+        "json",
+        "jsonc",
+        "markdown",
+        "plaintext",
+        "yml"
+    ]
+}
