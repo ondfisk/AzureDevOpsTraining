@@ -1,5 +1,8 @@
 {
     "recommendations": [
+        "davidanson.vscode-markdownlint",
+        // "github.copilot",
+        // "github.copilot-chat",
         "ms-vscode.azure-account",
         "ms-azure-devops.azure-pipelines",
         "ms-azuretools.vscode-bicep",
@@ -8,6 +11,7 @@
         // "ms-vscode.powershell",
         // "ms-vscode-remote.vscode-remote-extensionpack",
         "ms-azuretools.vscode-azureappservice",
+        "redhat.vscode-yaml",
         "streetsidesoftware.code-spell-checker"
     ]
 }

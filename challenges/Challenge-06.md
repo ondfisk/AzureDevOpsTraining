@@ -1,29 +1,53 @@
-# Challenge 06 - Azure App Services
+# Challenge 06 - Create Web App
 
 [< Previous](./Challenge-05.md) - **[Home](../README.md)** - [Next >](./Challenge-07.md)
 
-This challenge introduces *Azure App Services*.
-
-**Options**: You can skip this if you are already familiar with creating resources using the [Azure Portal](https://portal.azure.com/).
+This challenge adds a web app to your code base.
 
 ## Tasks
 
 - Move *Challenge 06* to *Doing*
-- Create a *resource group* and a web app using the Azure Portal.
+- Open VS Code.
+- Pull your changes.
+- In the Terminal type:
 
-    Keywords:
+    ```pwsh
+    # Create Blazor Server project:
+    dotnet new blazorserver --output src/MyApp
 
-    - Sweden Central
-    - Code
-    - Linux
-    - P1V3
-    - Application Insights
+    # Navigate to app:
+    pushd src/MyApp
 
-  If in doubt; use the defaults settings.
+    # Restore, build, run
+    dotnet restore
+    dotnet build
+    dotnet run
+    ```
 
-- Check your subscription - what has been created?
-- Use VS Code with the *Azure App Service* extension to deploy your web app.
-- Check the running app in your browser.
-- Move *Challenge 06* to *Done*
+- Open the app in a browser and test it
+- Go back to the *Terminal*
+- Press `[Ctrl]` + `[c]` to close it.
 
-**Note**: Regarding naming resources, cf. [Why Having an Azure Naming Convention Will Only Slow You Down!](https://ondfisk.dk/why-having-an-azure-naming-convention-will-only-slow-you-down/).
+  ```pwsh
+  # Go back
+  popd
+
+  # Create XUnit Test project:
+  dotnet new xunit --output test/MyApp.Tests
+
+  # Connect web and test projects
+  dotnet add test/MyApp.Tests reference src/MyApp
+
+  # Create Visual Studio solution:
+  dotnet new sln
+
+  # Add projects to solution:
+  dotnet sln add src/MyApp
+  dotnet sln add test/MyApp.Tests
+
+  # Run tests
+  dotnet test
+  ```
+
+- Commit and push code.
+- Move *Challenge 06* to *Done*.

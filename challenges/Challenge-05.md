@@ -1,55 +1,97 @@
-# Challenge 05 - Continuous Quality
+# Challenge 05 - Azure Pipelines
 
 [< Previous](./Challenge-04.md) - **[Home](../README.md)** - [Next >](./Challenge-06.md)
 
-This challenge introduces *Continuous Quality*.
+This challenge introduces *Service connections* and *Azure Pipelines*.
+
+**Note**: You may want to cf. [https://learn.microsoft.com/en-us/azure/devops/pipelines/build/variables](https://learn.microsoft.com/en-us/azure/devops/pipelines/build/variables).
 
 ## Tasks
 
-**Note**: See [Test Razor components in ASP.NET Core Blazor](https://learn.microsoft.com/en-us/aspnet/core/blazor/test) for instructions.
+- Move *Challenge 05* to *Doing*.
+- Go to *Project settings* `-->` *Pipelines* `-->` *Service connections*.
+- Add a new *Azure Resource Manager* service connection:
 
-- Move *Challenge 05* to *Doing*
-- Create a new branch to work in.
-- Add `bunit` to test project:
+  - If you may create *App Registrations*: Pick *Workload Identity federation (automatic)*.
+  - If not: Pick *Service principal (manual)* and fill in the blanks.
+  - Do *not* check *Grant access permission to all pipelines*.
 
-    ```pwsh
-    dotnet add test/MyApp.Tests package bunit
-    ```
+- Go to *Pipelines* `-->` *Pipelines*.
+- Create a new *Starter pipeline*.
+- Name the pipeline `/pipelines/infrastructure.yml`
+- Update trigger section:
 
-- Update the `GlobalUsings.cs`:
+  ```yaml
+  trigger:
+    branches:
+      include:
+        - main
+    paths:
+      include:
+        - infrastructure/**
+        - pipelines/infrastructure.yml
+  ```
 
-    ```csharp
-    global using Bunit;
-    global using Xunit;
-    global using MyApp.Pages;
-    ```
+- Add a variables section at the top with your values:
 
-- Rename `UnitTest1.cs` to `CounterTests.cs` and replace content:
+  ```yaml
+  variables:
+    azureConnection: ...
+    subscriptionId: ...
+    resourceGroup: ...
+    location: ...
+  ```
 
-    ```csharp
-    public class CounterTests
-    {
-        [Fact]
-        public void CounterShouldIncrementWhenClicked()
-        {
-            // Arrange
-            using var ctx = new TestContext();
-            var cut = ctx.RenderComponent<Counter>();
-            var paraElm = cut.Find("p");
+- Add a step convert your *Bicep* template to *ARM*:
 
-            // Act
-            cut.Find("button").Click();
+  ```yaml
+  - task: AzureCLI@2
+    displayName: Build Bicep Template
+    inputs:
+        azureSubscription: $(azureConnection)
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          mkdir $(Build.ArtifactStagingDirectory)/infrastructure
+          az bicep build --file $(Build.SourcesDirectory)/infrastructure/main.bicep --outfile $(Build.ArtifactStagingDirectory)/infrastructure/main.json
+          az bicep build-params --file $(Build.SourcesDirectory)/infrastructure/main.bicepparam --outfile $(Build.ArtifactStagingDirectory)/infrastructure/main.parameters.json
+  ```
 
-            // Assert
-            var paraElmText = paraElm.TextContent;
-            paraElmText.MarkupMatches("Current count: 1");
-        }
-    }
-    ```
+- *Save a run*
+- Ensure pipeline is green
+- Add step to *validate* your *ARM* template:
 
-- Run locally with `dotnet test`
-- Make the test fail - check with `dotnet test`
-- Publish code and create pull request
-- Inspect result of build, PR, and tests
-- Fix test and push change
-- Approve and merge PR
+  ```yaml
+  - task: AzureResourceManagerTemplateDeployment@3
+    displayName: Validate Bicep Template
+    inputs:
+      deploymentScope: Resource Group
+      azureResourceManagerConnection: $(azureConnection)
+      subscriptionId: $(subscriptionId)
+      action: Create Or Update Resource Group
+      resourceGroupName: $(resourceGroup)
+      location: $(location)
+      templateLocation: Linked artifact
+      csmFile: $(Build.ArtifactStagingDirectory)/infrastructure/main.json
+      csmParametersFile: $(Build.ArtifactStagingDirectory)/infrastructure/main.parameters.json
+      deploymentMode: Validation
+  ```
+
+- *Save*
+- Ensure pipeline is green
+- Check result in the [*Azure Portal*](https://portal.azure.com/) - what has happened?
+- Add step to *deploy* your *ARM* template:
+
+  ```yaml
+  - task: AzureResourceManagerTemplateDeployment@3
+    displayName: Deploy Azure Resources
+    inputs:
+      ...
+      deploymentMode: Incremental
+  ```
+
+- *Save*
+- Ensure pipeline is green
+- Check result in the [*Azure Portal*](https://portal.azure.com/) - what has happened?
+- Compare your new steps with [`/resources/pipelines/infrastructure.yml`](/resources/pipelines/infrastructure.yml) and update accordingly.
+- Move *Challenge 05* to *Done*.

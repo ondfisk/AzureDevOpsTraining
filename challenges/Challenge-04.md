@@ -1,25 +1,47 @@
-# Challenge 04 - Continuous Integration
+# Challenge 04 - Infrastructure as Code
 
 [< Previous](./Challenge-03.md) - **[Home](../README.md)** - [Next >](./Challenge-05.md)
 
-This challenge introduces *Trunk Based Development* and *Continuous Integration*.
+This challenge introduces *Infrastructure as Code* with *Bicep*.
 
 ## Tasks
 
-- Move *Challenge 04* to *Doing*
-- Configure branch protection with your chosen setup for:
+- Move *Challenge 04* to *Doing*.
+- Run:
 
-    - Branch policies:
+  ```pwsh
+  az account list-locations
+  ```
 
-        - Require a minimum number of reviewers
-        - Check for linked work items
-        - Check for comment resolution
-        - Limit merge types (enable *Squash Merge* only)
+  Compare output with:
 
-    - Build validation
+  ```pwsh
+  az account list-locations --query [].displayName --output tsv
+  ```
 
-- Try to push changes directly to `main`.
-- Create a new branch and change *something* in the app.
-- Create Pull Request - attach *Challenge 4*.
-- Get it approved and merged.
-- Verify that *Challenge 04* was automatically moved to *Done*.
+- Pick a location for your resources.
+- Pick a name for your resource group, e.g. `App` or `AzureDevOpsTraining`.
+- Pick a name for your web app (must be globally unique), e.g. `web-5b53b1b60756`.
+- Create an `/infrastructure` folder with these two [`main.bicep`](/resources/infrastructure/main.bicep) and [`main.bicepparam`](/resources/infrastructure/main.bicepparam) files.
+- Update `main.bicepparam`.
+- Create a new resource group using the command line:
+
+  ```pwsh
+  az group create --name ... --location ...
+  ```
+
+- Deploy your template using the command line:
+
+  ```pwsh
+  az deployment group create --resource-group ... --template-file ./infrastructure/main.bicep --parameters ./infrastructure/main.bicepparam
+  ```
+
+- Check your subscription - what has been created?
+- Delete Azure resources:
+
+  ```pwsh
+  az group delete --name ... --no-wait --yes
+  ```
+
+- Commit and push code.
+- Move *Challenge 04* to *Done*.

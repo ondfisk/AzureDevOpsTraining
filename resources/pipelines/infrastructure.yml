@@ -1,0 +1,58 @@
+---
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - infrastructure/**
+      - pipelines/infrastructure.yml
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  azureConnection: ...
+  subscriptionId: ...
+  resourceGroup: ...
+  location: ...
+
+steps:
+  - task: AzureCLI@2
+    displayName: Build Bicep Template
+    inputs:
+      azureSubscription: $(azureConnection)
+      scriptType: bash
+      scriptLocation: inlineScript
+      inlineScript: |
+        mkdir $(Build.ArtifactStagingDirectory)/infrastructure
+        az bicep build --file $(Build.SourcesDirectory)/infrastructure/main.bicep --outfile $(Build.ArtifactStagingDirectory)/infrastructure/main.json
+        az bicep build-params --file $(Build.SourcesDirectory)/infrastructure/main.bicepparam --outfile $(Build.ArtifactStagingDirectory)/infrastructure/main.parameters.json
+
+  - task: AzureResourceManagerTemplateDeployment@3
+    displayName: Validate Bicep Template
+    inputs:
+      deploymentScope: Resource Group
+      azureResourceManagerConnection: $(azureConnection)
+      subscriptionId: $(subscriptionId)
+      action: Create Or Update Resource Group
+      resourceGroupName: $(resourceGroup)
+      location: $(location)
+      templateLocation: Linked artifact
+      csmFile: $(Build.ArtifactStagingDirectory)/infrastructure/main.json
+      csmParametersFile: $(Build.ArtifactStagingDirectory)/infrastructure/main.parameters.json
+      deploymentMode: Validation
+
+  - task: AzureResourceManagerTemplateDeployment@3
+    displayName: Deploy Azure Resources
+    inputs:
+      deploymentScope: Resource Group
+      azureResourceManagerConnection: $(azureConnection)
+      subscriptionId: $(subscriptionId)
+      action: Create Or Update Resource Group
+      resourceGroupName: $(resourceGroup)
+      location: $(location)
+      templateLocation: Linked artifact
+      csmFile: $(Build.ArtifactStagingDirectory)/infrastructure/main.json
+      csmParametersFile: $(Build.ArtifactStagingDirectory)/infrastructure/main.parameters.json
+      deploymentMode: Incremental

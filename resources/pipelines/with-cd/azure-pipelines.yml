@@ -1,0 +1,114 @@
+---
+trigger:
+  - main
+
+variables:
+  vmImage: ubuntu-latest
+  configuration: Release
+  azureConnection: ...
+  subscriptionId: ...
+  resourceGroup: AzureDevOpsTraining
+  location: Sweden Central
+  webApp: ...
+
+stages:
+  - stage: build
+    displayName: Build and Publish
+    jobs:
+      - job: build
+        pool:
+          vmImage: $(vmImage)
+        displayName: Build and Publish
+        steps:
+          - task: DotNetCoreCLI@2
+            displayName: .NET Restore
+            inputs:
+              command: restore
+
+          - task: DotNetCoreCLI@2
+            displayName: .NET Build
+            inputs:
+              command: build
+              arguments: --no-restore --configuration $(configuration)
+
+          - task: DotNetCoreCLI@2
+            displayName: .NET Test
+            inputs:
+              command: test
+              arguments: --no-build --configuration $(configuration)
+
+          - task: DotNetCoreCLI@2
+            displayName: .NET Publish
+            inputs:
+              command: publish
+              publishWebProjects: true
+              zipAfterPublish: true
+              arguments: --no-build --output $(Build.ArtifactStagingDirectory)
+
+          - task: AzureCLI@2
+            displayName: Build Bicep Template
+            inputs:
+              azureSubscription: $(azureConnection)
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                mkdir $(Build.ArtifactStagingDirectory)/infrastructure
+                az bicep build --file $(Build.SourcesDirectory)/infrastructure/main.bicep --outfile $(Build.ArtifactStagingDirectory)/infrastructure/main.json
+                az bicep build-params --file $(Build.SourcesDirectory)/infrastructure/main.bicepparam --outfile $(Build.ArtifactStagingDirectory)/infrastructure/main.parameters.json
+
+          - task: AzureResourceManagerTemplateDeployment@3
+            displayName: Validate Bicep Template
+            inputs:
+              deploymentScope: Resource Group
+              azureResourceManagerConnection: $(azureConnection)
+              subscriptionId: $(subscriptionId)
+              action: Create Or Update Resource Group
+              resourceGroupName: $(resourceGroup)
+              location: $(location)
+              templateLocation: Linked artifact
+              csmFile: $(Build.ArtifactStagingDirectory)/infrastructure/main.json
+              csmParametersFile: $(Build.ArtifactStagingDirectory)/infrastructure/main.parameters.json
+              deploymentMode: Validation
+
+          - task: PublishPipelineArtifact@1
+            displayName: Publish Artifacts
+            inputs:
+              targetPath: $(Build.ArtifactStagingDirectory)
+              artifact: drop
+              publishLocation: pipeline
+
+  - stage: deploy
+    displayName: Deploy
+    dependsOn: build
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - deployment: deploy
+        displayName: Deploy
+        pool:
+          vmImage: $(vmImage)
+        environment: Production
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: AzureResourceManagerTemplateDeployment@3
+                  displayName: Deploy ARM Template
+                  inputs:
+                    deploymentScope: Resource Group
+                    azureResourceManagerConnection: $(azureConnection)
+                    subscriptionId: $(subscriptionId)
+                    action: Create Or Update Resource Group
+                    resourceGroupName: $(resourceGroup)
+                    location: $(location)
+                    templateLocation: Linked artifact
+                    csmFile: $(Pipeline.Workspace)/drop/infrastructure/main.json
+                    csmParametersFile: $(Pipeline.Workspace)/drop/infrastructure/main.parameters.json
+                    deploymentMode: Incremental
+                - task: AzureWebApp@1
+                  displayName: Deploy Web App
+                  inputs:
+                    azureSubscription: $(azureConnection)
+                    appType: webAppLinux
+                    appName: $(webApp)
+                    package: '$(Pipeline.Workspace)/drop/**/*.zip'
+                    runtimeStack: DOTNETCORE|7.0

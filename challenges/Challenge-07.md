@@ -1,27 +1,24 @@
-# Challenge 07 - Infrastructure as Code
+# Challenge 07 - Continuous Deployment
 
 [< Previous](./Challenge-06.md) - **[Home](../README.md)** - [Next >](./Challenge-08.md)
 
-This challenge introduces *Infrastructure as Code* with *Bicep*.
+This challenge introduces *Continuous Deployment*.
 
 ## Tasks
 
-- Move *Challenge 07* to *Doing*
-- Delete existing Azure resources (web app, app service plan, resource group)
-- Create a new branch to work in.
-- Create an `/infrastructure` folder with these two [`main.bicep`](/resources/infrastructure/main.bicep) and [`main.bicepparam`](/resources/infrastructure/main.bicepparam) files.
-- Update `main.bicepparam`.
-- Create a new resource group using the command line:
+- Move *Challenge 07* to *Doing*.
+- Create a new pipeline called `/pipelines/application.yml`.
+- Make sure it only runs on changes to `src/**`, `test/**`, and `pipelines/application.yml`.
+- Add build steps to your pipeline (you can use the *assistant* in the browser for help):
 
-    ```pwsh
-    az group create --name "AzureDevOpsTraining" --location "swedencentral"
-    ```
+  - .NET Core Restore
+  - .NET Core Build
+  - .NET Core Test
+  - .NET Core Publish (`publishWebProjects: true`, `zipAfterPublish: true`, `arguments: --output $(BuildArtifactStagingDirectory)`)
+  - Publish Pipeline Artifacts (`targetPath: $(Build.ArtifactStagingDirectory)`, `artifact: drop`, `publishLocation: pipeline`)
+  - Azure Web App (`appType: webAppLinux`, `appName: $(webApp)`, `package: '$(Build.ArtifactStagingDirectory)/***.zip'`, `runtimeStack: DOTNETCORE|7.0`)
 
-- Deploy your template using the command line:
-
-    ```pwsh
-    az deployment group create --resource-group "AzureDevOpsTraining" --template-file ./infrastructure/main.bicep --parameters ./infrastructure/main.bicepparam
-    ```
-
-- Delete Azure resources.
-- Commit and complete PR.
+- Run the pipeline and check that your app has been deployed to Azure.
+- Check the pipeline run and find your zipped web app under *Related*.
+- Compare your new steps with [`/resources/pipelines/application.yml`](/resources/pipelines/application.yml) and update accordingly.
+- Move *Challenge 07* to *Done*.

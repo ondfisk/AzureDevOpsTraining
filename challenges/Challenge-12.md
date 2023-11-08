@@ -1,93 +1,135 @@
-# Challenge 12 - Deploying Cloud Data
+# Challenge 12 - Adding local data
 
 [< Previous](./Challenge-11.md) - **[Home](../README.md)** - [Next >](./Challenge-13.md)
 
-This challenge deploys your data-driven application to Azure SQL.
+This challenge adds data to your application using SQL Server.
 
 ## Tasks
 
 - Move *Challenge 12* to *Doing*
 - Create new branch to work in.
-- Give web app a system-assigned managed identity (update Bicep template).
-- Create an Entra ID group: *My Web App SQL Admins*.
-- Add yourself, the AzDo Service Connection, and the web app to the group.
-- Add a SQL Server and SQL Database to your Bicep template:
+- Add packages  `Microsoft.EntityframeworkCore.SqlServer` and `Microsoft.EntityframeworkCore.Design`.
+- Add a `Movie` and a `Person` class to represent the `Movies` and `People` tables:
 
-    ```bicep
-    resource sqlServer 'Microsoft.Sql/servers@2023-02-01-preview' = {
-      name: sqlServerName
-      location: location
-      identity: {
-        type: 'SystemAssigned'
-      }
-      properties: {
-        administrators: {
-          administratorType: 'ActiveDirectory'
-          azureADOnlyAuthentication: true
-          login: sqlAdminGroupName
-          principalType: 'Group'
-          sid: sqlAdminGroupId
-        }
-      }
+    ```csharp
+    public class Movie
+    {
+        public int Id { get; set; }
+        public required string Title { get; set; }
+        public int? DirectorId { get; set; }
+        public Person? Director { get; set; }
+        public int Year { get; set; }
+    }
 
-      resource azureServices 'firewallRules' = {
-        name: 'AllowAllWindowsAzureIps'
-        properties: {
-          startIpAddress: '0.0.0.0'
-          endIpAddress: '0.0.0.0'
-        }
-      }
+    public class Person
+    {
+        public int Id { get; set; }
+        public required string Name { get; set; }
+        public ICollection<Movie>? DirectedMovies { get; set; }
     }
     ```
 
-- Add connection string to web app:
+- Create a data context class:
 
-    ```bicep
-    resource connectionStrings 'Microsoft.Web/sites/config@2022-09-01' = {
-      name: 'connectionstrings'
-      parent: webApp
-      properties: {
-        ConnectionString: {
-          value: 'Server=tcp:${sqlServer.properties.fullyQualifiedDomainName},1433;Initial Catalog=${databaseName};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Authentication="Active Directory Default";'
-          type: 'SQLAzure'
-        }
-      }
+    ```csharp
+    public class AppDbContext : DbContext
+    {
+        public DbSet<Movie> Movies => Set<Movie>();
+        public DbSet<Person> People => Set<Person>();
+        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
     }
     ```
 
-- Update pipeline to build migrations
+- Override the `OnModelCreating` method to specify data constraints:
 
-    ```yaml
-    - task: Bash@3
-      displayName: Install EF Tool
-      inputs:
-        targetType: inline
-        script: |
-          dotnet tool install --global dotnet-ef
+    ```csharp
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Movie>()
+            .HasOne(m => m.Director)
+            .WithMany(p => p.DirectedMovies)
+            .HasForeignKey(m => m.DirectorId);
 
-    - task: Bash@3
-      displayName: Build EF migrations bundle
-      inputs:
-        targetType: inline
-        script: |
-          dotnet ef migrations bundle --project src/MyApp/ --configuration $(configuration) --no-build --self-contained --output $(Build.ArtifactStagingDirectory)/efbundle
+        modelBuilder.Entity<Movie>()
+            .Property(m => m.Title)
+            .HasMaxLength(250);
+
+        modelBuilder.Entity<Person>()
+            .Property(p => p.Name)
+            .HasMaxLength(100);
+    }
     ```
 
-- Update pipeline to apply migrations before publishing app:
+- Append *seed* data to the `OnModelCreating` method:
 
-    ```yaml
-    - task: AzureCLI@2
-      displayName: Apply EF migrations bundle
-      inputs:
-        azureSubscription: $(azureConnection)
-        scriptType: bash
-        scriptLocation: inlineScript
-        inlineScript: |
-          CONNECTION_STRING=$(az webapp config connection-string list --name $(webApp) --resource-group $(resourceGroup) --query [].value --output tsv)
-          chmod +x $(Pipeline.Workspace)/drop/efbundle
-          $(Pipeline.Workspace)/drop/efbundle --connection "$CONNECTION_STRING"
+    ```csharp
+    modelBuilder.Entity<Person>().HasData(
+        new Person { Id = 1, Name = "Frank Darabont" },
+        new Person { Id = 2, Name = "Francis Ford Coppola" },
+        new Person { Id = 3, Name = "Christopher Nolan" },
+        new Person { Id = 4, Name = "Sidney Lumet" },
+        new Person { Id = 5, Name = "Steven Spielberg" },
+        new Person { Id = 6, Name = "Peter Jackson" },
+        new Person { Id = 7, Name = "Quentin Tarantino" },
+        new Person { Id = 8, Name = "Sergio Leone" }
+    );
+
+    modelBuilder.Entity<Movie>().HasData(
+        new Movie { Id = 1, Title = "The Shawshank Redemption", DirectorId = 1, Year = 1994 },
+        new Movie { Id = 2, Title = "The Godfather", DirectorId = 2, Year = 1972 },
+        new Movie { Id = 3, Title = "The Dark Knight", DirectorId = 3, Year = 2008 },
+        new Movie { Id = 4, Title = "The Godfather Part II", DirectorId = 1, Year = 1974 },
+        new Movie { Id = 5, Title = "12 Angry Men", DirectorId = 4, Year = 1957 },
+        new Movie { Id = 6, Title = "Schindler's List", DirectorId = 5, Year = 1993 },
+        new Movie { Id = 7, Title = "The Lord of the Rings: The Return of the King", DirectorId = 6, Year = 2003 },
+        new Movie { Id = 8, Title = "Pulp Fiction", DirectorId = 7, Year = 1994 },
+        new Movie { Id = 9, Title = "The Lord of the Rings: The Fellowship of the Ring", DirectorId = 6, Year = 2001 },
+        new Movie { Id = 10, Title = "The Good, the Bad and the Ugly", DirectorId = 8, Year = 1966 }
+    );
     ```
 
+- Verify that everything builds
+- Add a connection string to `appsettings.json`:
+
+    ```json
+    {
+      "ConnectionStrings": {
+        "ConnectionString": "Server=(localdb)\\mssqllocaldb;Database=MyDatabase;Trusted_Connection=True;MultipleActiveResultSets=true"
+    },
+    ```
+
+- Configure `AppDbContext` in `Program.cs`:
+
+    ```csharp
+    builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("ConnectionString")));
+    ```
+
+- Install EF tools: `dotnet tool install dotnet-ef --global`
+- Add migration: `dotnet ef migrations add Initial`
+- Apply migration: `dotnet ef database update`
+- Create a `MoviesDTO` type to for presentation:
+
+    ```csharp
+    public record MovieDTO(int Id, string Title, string Director, int Year);
+    ```
+
+- Create a `Movies` page using `Pages/FetchData.razor` as inspiration.
+
+    You will want to add these two lines to the top of the page
+
+    ```csharp
+    @using Microsoft.EntityFrameworkCore
+    @inject AppDbContext AppDbContext
+    ```
+
+    Then you can load your movies with:
+
+    ```csharp
+    movies = await AppDbContext.Movies
+        .OrderBy(m => m.Title)
+        .Select(m => new MovieDTO(m.Id, m.Title, m.Director!.Name, m.Year))
+        .ToArrayAsync();
+    ```
+
+- Add a link to the `Movies` page in `Pages/NavMenu.razor`
 - Create PR and merge.
-- Interact with the updated web app.
-- Verify that the *Movies* page is working.

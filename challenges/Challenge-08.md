@@ -1,86 +1,38 @@
-# Challenge 08 - Continuous Delivery
+# Challenge 08 - Continuous Integration
 
 [< Previous](./Challenge-07.md) - **[Home](../README.md)** - [Next >](./Challenge-09.md)
 
-This challenge introduces *Continuous Delivery*.
+This challenge introduces *Continuous Integration* using *Pull Requests*.
 
-## Part 1
+**Note**: You may want to check this out [Why Pull Requests Are a Bad Idea](https://www.youtube.com/watch?v=UQrlEXU6RM8).
 
-- Move *Challenge 08* to *Doing*
-- (Continue in the branch from *Challenge 07*)
-- Create Service Connection
-- Convert to multi-stage pipeline
-- Update variables:
+## Tasks
 
-    ```yaml
-    variables:
-      vmImage: ubuntu-latest
-      configuration: Release
-      azureConnection: ...
-      subscriptionId: ...
-      resourceGroup: ...
-      location: Sweden Central
-      webApp: ...
-    ```
-
-- Extend *build* stage with Bicep build and template validation:
+- Move *Challenge 08* to *Doing*.
+- Update your pipeline and ensure *deploy* step only run on:
 
     ```yaml
-    - task: AzureCLI@2
-      displayName: Build Bicep Template
-      inputs:
-        azureSubscription: $(azureConnection)
-        scriptType: bash
-        scriptLocation: inlineScript
-        inlineScript: |
-          az bicep build --file $(Build.SourcesDirectory)/infrastructure/main.bicep
-          az bicep build-params --file $(Build.SourcesDirectory)/infrastructure/main.bicepparam --outfile $(Build.SourcesDirectory)/infrastructure/main.parameters.json
-
-    - task: AzureResourceManagerTemplateDeployment@3
-      displayName: Validate Bicep Template
-      inputs:
-        deploymentScope: Resource Group
-        azureResourceManagerConnection: $(azureConnection)
-        subscriptionId: $(subscriptionId)
-        action: Create Or Update Resource Group
-        resourceGroupName: $(resourceGroup)
-        location: $(location)
-        templateLocation: Linked artifact
-        csmFile: $(Build.SourcesDirectory)/infrastructure/main.json
-        csmParametersFile: $(Build.SourcesDirectory)/infrastructure/main.parameters.json
-        deploymentMode: Validation
+    condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
     ```
 
-**Note**: You may want to cf. [https://learn.microsoft.com/en-us/azure/devops/pipelines/build/variables](https://learn.microsoft.com/en-us/azure/devops/pipelines/build/variables).
+- Configure branch protection with your chosen setup for:
 
-## Part 2
+  - Branch policies:
 
-- Add a *Production* environment to Azure DevOps.
-- Add deployment stage to your pipeline with conditions:
+    - Require a minimum number of reviewers
+    - Check for linked work items
+    - Check for comment resolution
+    - Limit merge types (enable *Squash Merge* only)
 
-  - Depends on build stage
-  - Runs only if build succeeded and main branch: `and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))`
+  - Build validation
 
-- Add deployment job targeting the *Production* environment
-- Add steps:
+    - Add *Infrastructure* pipeline with path filter: `/infrastructure/*; /pipelines/infrastructure.yml`.
+    - Add *Application* pipeline with path filter: `/src/*; /test/*; /pipelines/application.yml`.
 
-  - Deploy ARM Template
-  - Deploy web app:
-
-    ```yaml
-    - task: AzureWebApp@1
-      displayName: Deploy Web App
-      inputs:
-        azureSubscription: $(azureConnection)
-        appType: webAppLinux
-        appName: $(webApp)
-        package: '$(System.ArtifactsDirectory)/**/*.zip'
-        runtimeStack: DOTNETCORE|7.0
-    ```
-
-- Create PR and merge
-- Verify you web app has been published in your browser.
-
-## References
-
-[Deploy Azure resources by using Bicep and Azure Pipelines](https://learn.microsoft.com/en-us/training/paths/bicep-azure-pipelines/)
+- Try to push changes directly to `main`.
+- Create a new branch and change *something* in the app.
+- Create Pull Request - attach *Challenge 08*.
+- Verify pipeline runs as expected.
+- Get it approved and merged.
+- Verify that *Challenge 08* was automatically moved to *Done*.
+- Verify pipeline runs as expected.

@@ -1,0 +1,60 @@
+---
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - src/**
+      - test/**
+      - pipelines/application.yml
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  configuration: Release
+  azureConnection: ...
+  webApp: ...
+
+steps:
+  - task: DotNetCoreCLI@2
+    displayName: .NET Restore
+    inputs:
+      command: restore
+
+  - task: DotNetCoreCLI@2
+    displayName: .NET Build
+    inputs:
+      command: build
+      arguments: --no-restore --configuration $(configuration)
+
+  - task: DotNetCoreCLI@2
+    displayName: .NET Test
+    inputs:
+      command: test
+      arguments: --no-build --configuration $(configuration)
+
+  - task: DotNetCoreCLI@2
+    displayName: .NET Publish
+    inputs:
+      command: publish
+      publishWebProjects: true
+      zipAfterPublish: true
+      arguments: --no-build --output $(Build.ArtifactStagingDirectory)
+
+  - task: PublishPipelineArtifact@1
+    displayName: Publish Artifacts
+    inputs:
+      targetPath: $(Build.ArtifactStagingDirectory)
+      artifact: drop
+      publishLocation: pipeline
+
+  - task: AzureWebApp@1
+    displayName: Deploy Web App
+    inputs:
+      azureSubscription: $(azureConnection)
+      appType: webAppLinux
+      appName: $(webApp)
+      package: '$(Build.ArtifactStagingDirectory)/**/*.zip'
+      runtimeStack: DOTNETCORE|7.0

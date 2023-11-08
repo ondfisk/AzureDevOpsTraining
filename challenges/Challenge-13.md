@@ -1,70 +1,89 @@
-# Challenge 13 - Staging
+# Challenge 13 - Deploying Cloud Data
 
-[< Previous](./Challenge-12.md) - **[Home](../README.md)**
+[< Previous](./Challenge-12.md) - **[Home](../README.md)** - [Next >](./Challenge-14.md)
 
-This challenge adds a deployment slot and a staging database, allowing you to test your live application before deployment.
+This challenge deploys your data-driven application to Azure SQL.
 
-## Part 1
+## Tasks
 
 - Move *Challenge 13* to *Doing*
 - Create new branch to work in.
-- Using the [Azure Portal](https://portal.azure.com/) first:
+- Give web app a system-assigned managed identity (update Bicep template).
+- Create an Entra ID group: *My Web App SQL Admins*.
+- Add yourself, the AzDo Service Connection, and the web app to the group.
+- Add a SQL Server and SQL Database to your Bicep template:
 
-    - Add deployment slot for staging
-    - Add new SQL database for staging
-    - Update the connection string for staging - make sure you tick `Slot Setting`
-
-- Update `main.bicep` and `main.bicepparams` to match the changes you made in the portal:
-
-    - Add deployment slot - `resource deploymentSlot 'Microsoft.Web/sites/slots@2022-09-01'` with `parent: webApp`
-    - Add staging database
-    - Add staging connection string - `resource slotConnectionStrings 'Microsoft.Web/sites/slots/config@2022-09-01'`
-    - Add slot config names:
-
-        ```bicep
-        resource slotConfigNames 'Microsoft.Web/sites/config@2022-09-01' = {
-          name: 'slotConfigNames'
-          parent: webApp
-          properties: {
-            appSettingNames: []
-            azureStorageConfigNames: []
-            connectionStringNames: [
-              'ConnectionString'
-            ]
-          }
+    ```bicep
+    resource sqlServer 'Microsoft.Sql/servers@2023-02-01-preview' = {
+      name: sqlServerName
+      location: location
+      identity: {
+        type: 'SystemAssigned'
+      }
+      properties: {
+        administrators: {
+          administratorType: 'ActiveDirectory'
+          azureADOnlyAuthentication: true
+          login: sqlAdminGroupName
+          principalType: 'Group'
+          sid: sqlAdminGroupId
         }
-        ```
+      }
+
+      resource azureServices 'firewallRules' = {
+        name: 'AllowAllWindowsAzureIps'
+        properties: {
+          startIpAddress: '0.0.0.0'
+          endIpAddress: '0.0.0.0'
+        }
+      }
+    }
+    ```
+
+- Add connection string to web app:
+
+    ```bicep
+    resource connectionStrings 'Microsoft.Web/sites/config@2022-09-01' = {
+      name: 'connectionstrings'
+      parent: webApp
+      properties: {
+        ConnectionString: {
+          value: 'Server=tcp:${sqlServer.properties.fullyQualifiedDomainName},1433;Initial Catalog=${databaseName};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Authentication="Active Directory Default";'
+          type: 'SQLAzure'
+        }
+      }
+    }
+    ```
+
+- Update pipeline to build migrations
+
+    ```yaml
+    - task: Bash@3
+      displayName: Install EF Tool
+      inputs:
+        targetType: inline
+        script: |
+          dotnet tool install --global dotnet-ef
+
+    - task: Bash@3
+      displayName: Build EF migrations bundle
+      inputs:
+        targetType: inline
+        script: |
+          dotnet ef migrations bundle --project src/MyApp/ --configuration $(configuration) --no-build --self-contained --output $(Build.ArtifactStagingDirectory)/efbundle
+
+    - task: AzureCLI@2
+      displayName: Apply EF migrations bundle
+      inputs:
+        azureSubscription: $(azureConnection)
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          CONNECTION_STRING=$(az webapp config connection-string list --name $(webApp) --resource-group $(resourceGroup) --query [].value --output tsv)
+          chmod +x $(Build.ArtifactStagingDirectory)/drop/efbundle
+          $(Build.ArtifactStagingDirectory)/drop/efbundle --connection "$CONNECTION_STRING"
+    ```
 
 - Create PR and merge.
-- Validate resources in the [Azure Portal](https://portal.azure.com/).
-- Add staging slot identity to SQL Admin group.
-- Add staging slot URI to redirect URIs in your Entra ID App Registration.
-
-## Part 2
-
-- Create new branch to work in.
-- Make a change to `Pages/Index.razor`.
-- Update pipeline:
-
-    - Create `Stage` stage between `Build` and `Deploy`
-    - `Stage` should only run on pull request - `eq(variables['Build.Reason'], 'PullRequest')`
-    - `Stage` should deploy to `staging` deployment slot
-    - Update `Deploy` stage to swap slots instead of deploy web app:
-
-        ```yaml
-        - task: AzureAppServiceManage@0
-            displayName: Swap Deployment Slots
-            inputs:
-            azureSubscription: $(azureConnection)
-            WebAppName: $(webApp)
-            Action: Swap Slots
-            ResourceGroupName: $(resourceGroup)
-            SourceSlot: $(deploymentSlot)
-            SwapWithProduction: true
-        ```
-
-- Create PR.
-- Validate staging resources in the Azure Portal.
-- Approve and merge.
-- Validate production in a browser.
-- Validate staging contains the old version.
+- Interact with the updated web app.
+- Verify that the *Movies* page is working.

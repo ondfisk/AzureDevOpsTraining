@@ -19,6 +19,9 @@ resource webApp 'Microsoft.Web/sites@2022-09-01' = {
   name: webAppName
   location: location
   kind: 'app,linux'
+  identity: {
+    type: 'SystemAssigned'
+  }
   properties: {
     serverFarmId: appServicePlan.id
     reserved: true

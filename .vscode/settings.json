@@ -9,5 +9,9 @@
         "markdown",
         "plaintext",
         "yml"
-    ]
+    ],
+    // "editor.trimAutoWhitespace": true,
+    // "files.autoSave": "afterDelay",
+    // "files.trimFinalNewlines": true,
+    // "files.trimTrailingWhitespace": true
 }
