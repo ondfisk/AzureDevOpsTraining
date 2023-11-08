@@ -9,10 +9,19 @@ This challenge introduces *Infrastructure as Code* with *Bicep*.
 - Move *Challenge 07* to *Doing*
 - Delete existing Azure resources (web app, app service plan, resource group)
 - Create a new branch to work in.
-- Create an `/infrastructure` folder with a `main.bicep` file.
-- In the Bicep file declare an *App Service Plan* and a *Web App*.
-- Create a new resource group using the command line (`az group create -h`).
-- Deploy your template using the command line (`az deployment group create -h`).
-- Parameterize your Bicep file and try again.
+- Create an `/infrastructure` folder with these two [`main.bicep`](/resources/infrastructure/main.bicep) and [`main.bicepparam`](/resources/infrastructure/main.bicepparam) files.
+- Update `main.bicepparam`.
+- Create a new resource group using the command line:
+
+    ```pwsh
+    az group create --name "AzureDevOpsTraining" --location "swedencentral"
+    ```
+
+- Deploy your template using the command line:
+
+    ```pwsh
+    az deployment group create --resource-group "AzureDevOpsTraining" --template-file ./infrastructure/main.bicep --parameters ./infrastructure/main.bicepparam
+    ```
+
 - Delete Azure resources.
-- Move *Challenge 07* to *Done*
+- Commit and complete PR.

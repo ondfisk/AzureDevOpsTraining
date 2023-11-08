@@ -13,7 +13,8 @@ This challenge introduces *Azure Pipelines*.
 
     - .NET Core Restore
     - .NET Core Build
-    - .NET Core Publish (`publishWebProjects: true`, `zipAfterPublish: true`, `arguments: --no-build --output $(Build.ArtifactStagingDirectory)`)
+    - .NET Core Test
+    - .NET Core Publish (`publishWebProjects: true`, `zipAfterPublish: true`, `arguments: --output $(Build.ArtifactStagingDirectory)`)
     - Publish Pipeline Artifacts
 
 - Run the pipeline and verify that it published a zipped version of your web app.

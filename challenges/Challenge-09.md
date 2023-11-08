@@ -9,7 +9,7 @@ This challenge introduces authentication and authorization with Entra ID.
 - Move *Challenge 09* to *Doing*
 - Configure App Registration in Entra ID:
 
-    - Name: `MyWebApp`
+    - Name: `MyApp`
     - Supported account types: `Accounts in this organizational directory only (ondfisk only - Single tenant)`
     - Redirect URI (optional): `Web` --> `https://localhost/signin-oidc`
     - Implicit grant and hybrid flows: Check `ID tokens (used for implicit and hybrid flows)`

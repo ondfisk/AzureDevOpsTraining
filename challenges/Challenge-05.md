@@ -10,12 +10,21 @@ This challenge introduces *Continuous Quality*.
 
 - Move *Challenge 05* to *Doing*
 - Create a new branch to work in.
-- Create new `xunit` project - `MyWebApp.Tests` under `/tests`.
-- Add test project to solution (`dotnet sln add -h`)
-- Go to your test project and add a reference to the web project (`dotnet add reference -h`)
-- Add `bunit` to test project (`dotnet add package -h`)
-- Update the `GlobalUsings.cs` file to include `Bunit`, `Xunit`, and `MyWebApp.Pages`.
-- Replace `UnitTest1.cs` with `CounterTests.cs` to test project:
+- Add `bunit` to test project:
+
+    ```pwsh
+    dotnet add test/MyApp.Tests package bunit
+    ```
+
+- Update the `GlobalUsings.cs`:
+
+    ```csharp
+    global using Bunit;
+    global using Xunit;
+    global using MyApp.Pages;
+    ```
+
+- Rename `UnitTest1.cs` to `CounterTests.cs` and replace content:
 
     ```csharp
     public class CounterTests
@@ -39,9 +48,8 @@ This challenge introduces *Continuous Quality*.
     ```
 
 - Run locally with `dotnet test`
-- Extend pipeline with `dotnet test`
-- Make the test fail
+- Make the test fail - check with `dotnet test`
 - Publish code and create pull request
 - Inspect result of build, PR, and tests
-- Fix test
+- Fix test and push change
 - Approve and merge PR

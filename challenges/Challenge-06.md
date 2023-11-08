@@ -4,6 +4,8 @@
 
 This challenge introduces *Azure App Services*.
 
+**Options**: You can skip this if you are already familiar with creating resources using the [Azure Portal](https://portal.azure.com/).
+
 ## Tasks
 
 - Move *Challenge 06* to *Doing*

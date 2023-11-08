@@ -25,4 +25,4 @@ This challenge introduces *Continuous Monitoring* with Application Insights.
 
 - Create PR and merge.
 - Interact with the updated web app.
-- Verify telemetry being pushed to Application Insights using the Azure Portal.
+- Verify telemetry being pushed to Application Insights using the [Azure Portal](https://portal.azure.com/).

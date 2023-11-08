@@ -70,7 +70,7 @@ This challenge deploys your data-driven application to Azure SQL.
       inputs:
         targetType: inline
         script: |
-          dotnet ef migrations bundle --project src/MyWebApp/ --configuration $(configuration) --no-build --self-contained --output $(Build.ArtifactStagingDirectory)/efbundle
+          dotnet ef migrations bundle --project src/MyApp/ --configuration $(configuration) --no-build --self-contained --output $(Build.ArtifactStagingDirectory)/efbundle
     ```
 
 - Update pipeline to apply migrations before publishing app:

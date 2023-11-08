@@ -8,7 +8,7 @@ This challenge adds a deployment slot and a staging database, allowing you to te
 
 - Move *Challenge 13* to *Doing*
 - Create new branch to work in.
-- Using the Azure Portal first:
+- Using the [Azure Portal](https://portal.azure.com/) first:
 
     - Add deployment slot for staging
     - Add new SQL database for staging
@@ -36,7 +36,7 @@ This challenge adds a deployment slot and a staging database, allowing you to te
         ```
 
 - Create PR and merge.
-- Validate resources in the Azure Portal.
+- Validate resources in the [Azure Portal](https://portal.azure.com/).
 - Add staging slot identity to SQL Admin group.
 - Add staging slot URI to redirect URIs in your Entra ID App Registration.
 
